@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.IntSize
 import io.getstream.sketchbook.internal.SketchPath
@@ -105,7 +107,7 @@ public class SketchbookController {
     public val isEraseMode: State<Boolean> = _isEraseMode
 
     /** Stack of the drawn [Path]s. */
-    internal val drawPaths = Stack<SketchPath>()
+    internal var drawPaths = Stack<SketchPath>()
 
     /** Stack of the redo [Path]s. */
     private val redoPaths = Stack<SketchPath>()
@@ -293,5 +295,45 @@ public class SketchbookController {
     internal fun releaseBitmap() {
         pathBitmap?.asAndroidBitmap()?.recycle()
         pathBitmap = null
+    }
+
+    private var originalWidth: Int = 0
+    private var originalHeight: Int = 0
+
+    public fun update(
+        newWidth: Int,
+        newHeight: Int
+    ) {
+        if (originalWidth != 0 && originalWidth != newWidth && originalHeight != 0 && originalHeight != newHeight) {
+            drawPaths = transformSketchPaths(drawPaths, originalWidth, originalHeight, newHeight, newWidth)
+        }
+
+        originalWidth = newWidth
+        originalHeight = newHeight
+    }
+
+    private fun transformSketchPaths(
+        stack: Stack<SketchPath>,
+        originalWidth: Int,
+        originalHeight: Int,
+        newWidth: Int,
+        newHeight: Int
+    ): Stack<SketchPath> {
+        val scaleX = newWidth.toFloat() / originalHeight.toFloat()
+        val scaleY = newHeight.toFloat() / originalWidth.toFloat()
+
+        val transformedStack = Stack<SketchPath>()
+
+        for (sketchPath in stack) {
+            val newPath = sketchPath.path.asAndroidPath()
+            val matrix = Matrix().apply {
+                postScale(scaleY, scaleX)
+            }
+            newPath.transform(matrix)
+
+            transformedStack.push(SketchPath(newPath.asComposePath(), sketchPath.paint))
+        }
+
+        return transformedStack
     }
 }

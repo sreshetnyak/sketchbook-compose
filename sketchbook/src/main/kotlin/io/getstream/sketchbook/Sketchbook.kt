@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.toSize
 import androidx.core.util.Pools
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -92,11 +91,12 @@ public fun Sketchbook(
 
         onDispose {
             controller.releaseBitmap()
-            controller.clear()
+//            controller.clear()
         }
     }
 
     val coroutineScope = rememberCoroutineScope()
+
     SideEffect {
         coroutineScope.launch(Dispatchers.Main) {
             controller.reviseTick.collect {
@@ -122,6 +122,10 @@ public fun Sketchbook(
                 controller.pathBitmap =
                     ImageBitmap(size.width, size.height, ImageBitmapConfig.Argb8888)
                         .also {
+                            controller.update(
+                                newSize.width,
+                                newSize.height
+                            )
                             canvas = Canvas(it)
                             controller.bitmapSize.value = size
                         }
